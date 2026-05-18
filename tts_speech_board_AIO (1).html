@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>TTS + Speech Board</title>
+<!--
+  ============================================================
+  TEXT-TO-SPEECH + SPEECH BOARD  — AIO Web File
+  Kompatibel dengan MIT App Inventor (WebViewer Component)
+  Gunakan di App Inventor: WebViewer.GoToUrl("file:///android_asset/...")
+  Atau host di server lalu panggil via WebViewer.HomeUrl
+  ============================================================
+  Lisensi: MIT
+  ============================================================
+-->
+<style>
+  :root {
+    --bg:       #F5F5F0;
+    --surface:  #FFFFFF;
+    --border:   #E0DED8;
+    --accent:   #1D6FE8;
+    --accent-bg:#EBF1FC;
+    --danger:   #C23B22;
+    --danger-bg:#FAEAE7;
+    --success:  #1A8A5C;
+    --text:     #1A1A18;
+    --muted:    #6B6B67;
+    --radius:   14px;
+    --radius-sm:9px;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:      #1A1A18;
+      --surface: #26261F;
+      --border:  #3A3A32;
+      --accent:  #5A9BF0;
+      --accent-bg:#1C2A3A;
+      --danger:  #E05A40;
+      --danger-bg:#3A1A14;
+      --success: #3ABA7C;
+      --text:    #F0EFE8;
+      --muted:   #9A9A90;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    overscroll-behavior: none;
+  }
+
+  /* ── LAYOUT ─────────────────────────────────────── */
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 540px;
+    margin: 0 auto;
+  }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 0;
+  }
+  .app-title {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 10px;
+  }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--muted);
+    transition: background .3s;
+  }
+  .dot.active { background: var(--success); }
+
+  /* ── TABS ────────────────────────────────────────── */
+  .tab-row {
+    display: flex;
+    margin: 12px 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 10px 0;
+    font-size: 13px;
+    font-weight: 500;
+    background: none;
+    border: none;
+    border-bottom: 2.5px solid transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .tab-btn.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+  .tab-icon { font-size: 16px; }
+
+  /* ── SCROLL BODY ─────────────────────────────────── */
+  .scroll-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px 24px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── CARD ────────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .card-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  /* ── TEXTAREA ────────────────────────────────────── */
+  textarea#ttsInput {
+    width: 100%;
+    min-height: 90px;
+    resize: vertical;
+    font-size: 15px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    line-height: 1.6;
+    outline: none;
+    -webkit-appearance: none;
+  }
+  textarea#ttsInput:focus { border-color: var(--accent); }
+
+  /* ── SELECT ──────────────────────────────────────── */
+  select {
+    width: 100%;
+    font-size: 13px;
+    padding: 9px 10px;
+    margin-top: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 30px;
+  }
+
+  /* ── SLIDERS ─────────────────────────────────────── */
+  .slider-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .slider-label { font-size: 12px; color: var(--muted); min-width: 68px; }
+  .slider-val { font-size: 12px; font-weight: 500; min-width: 36px; text-align: right; }
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,.15);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+  }
+
+  /* ── BUTTONS ─────────────────────────────────────── */
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .btn:active { transform: scale(0.96); opacity: .85; }
+  .btn:disabled { opacity: .4; pointer-events: none; }
+  .btn.primary { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+  .btn.danger  { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+  .btn.full    { flex: 1; justify-content: center; }
+  .btn svg { flex-shrink: 0; }
+
+  /* ── STATUS ──────────────────────────────────────── */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+    min-height: 18px;
+  }
+
+  /* ── QUICK PHRASES ───────────────────────────────── */
+  .quick-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+  .quick-chip {
+    font-size: 12px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    transition: background .12s, transform .1s;
+    user-select: none;
+  }
+  .quick-chip:active { transform: scale(0.95); background: var(--accent-bg); }
+
+  /* ── BOARD CATEGORIES ────────────────────────────── */
+  .cat-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .cat-tag {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: background .12s, color .12s;
+    user-select: none;
+  }
+  .cat-tag.active {
+    background: var(--accent-bg);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* ── BOARD GRID ──────────────────────────────────── */
+  .board-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  @media (min-width: 360px) { .board-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 440px) { .board-grid { grid-template-columns: repeat(4, 1fr); } }
+
+  .board-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 10px 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    cursor: pointer;
+    min-height: 74px;
+    text-align: center;
+    transition: background .12s, border-color .12s, transform .1s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .board-card:active { transform: scale(0.93); }
+  .board-card.speaking {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+  }
+  .board-card .bc-emoji { font-size: 24px; line-height: 1; }
+  .board-card .bc-word  { font-size: 12px; font-weight: 500; line-height: 1.3; color: var(--text); }
+  .board-card .bc-cat   { font-size: 10px; color: var(--muted); }
+  .board-card .bc-del {
+    position: absolute;
+    top: 4px; right: 4px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: none;
+    font-size: 12px;
+    line-height: 18px;
+    text-align: center;
+    cursor: pointer;
+    display: none;
+  }
+  .board-card:hover .bc-del,
+  .board-card:focus-within .bc-del { display: block; }
+
+  /* ── ADD PHRASE ROW ──────────────────────────────── */
+  .add-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .add-row input[type=text] {
+    flex: 1;
+    min-width: 120px;
+    font-size: 13px;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    outline: none;
+    -webkit-appearance: none;
+  }
+  .add-row input[type=text]:focus { border-color: var(--accent); }
+  .add-row select {
+    flex: none;
+    width: auto;
+    min-width: 110px;
+    margin-top: 0;
+  }
+
+  /* ── ICONS ───────────────────────────────────────── */
+  .ic { display:inline-block; width:16px; height:16px; flex-shrink:0; }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <span class="app-title">Suara & Ucapan</span>
+    <div class="status-pill">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Siap</span>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tab-row">
+    <button class="tab-btn active" id="tabTTS" onclick="switchTab('tts')">
+      <svg class="tab-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+        <path d="M4 7h12M4 10h8M4 13h10"/>
+        <path d="M15 15l3 3-3-3"/>
+      </svg>
+      Text-to-Speech
+    </button>
+    <button class="tab-btn" id="tabBoard" onclick="switchTab('board')">
+      <svg class="tab-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+        <rect x="2" y="2" width="7" height="7" rx="1.5"/>
+        <rect x="11" y="2" width="7" height="7" rx="1.5"/>
+        <rect x="2" y="11" width="7" height="7" rx="1.5"/>
+        <rect x="11" y="11" width="7" height="7" rx="1.5"/>
+      </svg>
+      Speech Board
+    </button>
+  </div>
+
+  <!-- SCROLL BODY -->
+  <div class="scroll-body">
+
+    <!-- ══ TTS PANEL ══════════════════════════════════ -->
+    <div class="panel active" id="panelTTS">
+
+      <!-- Teks -->
+      <div class="card">
+        <div class="card-label">Ketik teks</div>
+        <textarea id="ttsInput" placeholder="Tulis kalimat yang ingin diucapkan…"></textarea>
+
+        <select id="voiceSelect" title="Pilih suara"></select>
+
+        <div class="slider-group">
+          <span class="slider-label">🐇 Kecepatan</span>
+          <input type="range" min="0.5" max="2" step="0.1" value="1" id="rateSlider"
+            oninput="document.getElementById('rateVal').textContent=parseFloat(this.value).toFixed(1)">
+          <span class="slider-val" id="rateVal">1.0</span>
+        </div>
+        <div class="slider-group">
+          <span class="slider-label">🎵 Nada</span>
+          <input type="range" min="0.5" max="2" step="0.1" value="1" id="pitchSlider"
+            oninput="document.getElementById('pitchVal').textContent=parseFloat(this.value).toFixed(1)">
+          <span class="slider-val" id="pitchVal">1.0</span>
+        </div>
+        <div class="slider-group">
+          <span class="slider-label">🔊 Volume</span>
+          <input type="range" min="0" max="1" step="0.05" value="1" id="volSlider"
+            oninput="document.getElementById('volVal').textContent=Math.round(parseFloat(this.value)*100)+'%'">
+          <span class="slider-val" id="volVal">100%</span>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn primary full" id="speakBtn" onclick="speakText()">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><path d="M3 2.5a.5.5 0 0 1 .8-.4l8 5a.5.5 0 0 1 0 .8l-8 5A.5.5 0 0 1 3 12.5v-10z"/></svg>
+            Ucapkan
+          </button>
+          <button class="btn" id="pauseBtn" onclick="pauseResume()" disabled>
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><path d="M4 2h2v11H4V2zm5 0h2v11H9V2z"/></svg>
+            Jeda
+          </button>
+          <button class="btn danger" id="stopBtn" onclick="stopSpeech()" disabled>
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><rect x="2" y="2" width="11" height="11" rx="1"/></svg>
+            Stop
+          </button>
+        </div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn full" onclick="clearText()">🗑 Hapus Teks</button>
+        </div>
+        <div class="status-bar" id="statusBar">Pilih suara lalu ketik teks…</div>
+      </div>
+
+      <!-- Quick Phrases -->
+      <div class="card">
+        <div class="card-label">Frasa cepat</div>
+        <div class="quick-wrap" id="quickWrap"></div>
+      </div>
+
+    </div><!-- /panelTTS -->
+
+    <!-- ══ BOARD PANEL ════════════════════════════════ -->
+    <div class="panel" id="panelBoard">
+      <div class="card">
+        <div class="card-label">Pilih kategori</div>
+        <div class="cat-row" id="catRow"></div>
+
+        <div class="board-grid" id="boardGrid"></div>
+
+        <div class="add-row">
+          <input type="text" id="newText" placeholder="Teks baru…" onkeydown="if(event.key==='Enter')addPhrase()">
+          <select id="newCatSel" style="min-width:110px;"></select>
+          <button class="btn primary" onclick="addPhrase()">+ Tambah</button>
+        </div>
+      </div>
+    </div><!-- /panelBoard -->
+
+  </div><!-- /scroll-body -->
+</div><!-- /app-shell -->
+
+<script>
+/* ──────────────────────────────────────────────────────
+   CORE TTS ENGINE
+────────────────────────────────────────────────────── */
+const synth = window.speechSynthesis;
+let voices = [], isPaused = false;
+
+function loadVoices() {
+  voices = synth.getVoices();
+  const sel = document.getElementById('voiceSelect');
+  sel.innerHTML = '';
+  // Prioritas: Indonesia > Melayu > Inggris > lainnya
+  const prio = voices.filter(v => v.lang.startsWith('id') || v.lang.startsWith('ms'));
+  const eng  = voices.filter(v => v.lang.startsWith('en'));
+  const rest = voices.filter(v => !prio.includes(v) && !eng.includes(v));
+  [...prio, ...eng, ...rest].forEach(v => {
+    const o = document.createElement('option');
+    o.value = v.name;
+    const flag = v.lang.startsWith('id') ? '🇮🇩 ' : v.lang.startsWith('ms') ? '🇲🇾 ' : v.lang.startsWith('en') ? '🇬🇧 ' : '';
+    o.textContent = flag + v.name + ' — ' + v.lang;
+    sel.appendChild(o);
+  });
+  const id = voices.find(v => v.lang.startsWith('id'));
+  if (id) sel.value = id.name;
+}
+
+if (typeof synth.onvoiceschanged !== 'undefined') synth.onvoiceschanged = loadVoices;
+setTimeout(loadVoices, 200); // fallback for Android WebView
+
+function getParams() {
+  return {
+    voice:  voices.find(v => v.name === document.getElementById('voiceSelect').value) || null,
+    rate:   parseFloat(document.getElementById('rateSlider').value),
+    pitch:  parseFloat(document.getElementById('pitchSlider').value),
+    volume: parseFloat(document.getElementById('volSlider').value),
+  };
+}
+
+function speak(text, onEnd, onStart) {
+  if (!text || !text.trim()) return;
+  synth.cancel();
+  const utt = new SpeechSynthesisUtterance(text.trim());
+  const p = getParams();
+  utt.voice = p.voice;
+  utt.rate  = p.rate;
+  utt.pitch = p.pitch;
+  utt.volume = p.volume;
+  utt.onstart  = () => { setStatus('Berbicara…', true); setSpeakingUI(true); if (onStart) onStart(); };
+  utt.onend    = () => { setStatus('Selesai ✓', false); setSpeakingUI(false); clearActiveBoardCards(); if (onEnd) onEnd(); };
+  utt.onerror  = (e) => { setStatus('Error: ' + e.error, false); setSpeakingUI(false); clearActiveBoardCards(); };
+  utt.onpause  = () => setStatus('Dijeda', false);
+  utt.onresume = () => setStatus('Melanjutkan…', true);
+  synth.speak(utt);
+  // Android WebView fix: keep synth alive
+  if (/Android/i.test(navigator.userAgent)) {
+    const keepAlive = setInterval(() => {
+      if (!synth.speaking) { clearInterval(keepAlive); return; }
+      synth.pause(); synth.resume();
+    }, 10000);
+  }
+}
+
+function speakText() {
+  const txt = document.getElementById('ttsInput').value;
+  if (!txt.trim()) { document.getElementById('ttsInput').focus(); return; }
+  speak(txt);
+}
+
+function pauseResume() {
+  if (synth.paused) {
+    synth.resume(); isPaused = false;
+    document.getElementById('pauseBtn').innerHTML = '<svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><path d="M4 2h2v11H4V2zm5 0h2v11H9V2z"/></svg> Jeda';
+    setStatus('Melanjutkan…', true);
+  } else {
+    synth.pause(); isPaused = true;
+    document.getElementById('pauseBtn').innerHTML = '<svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><path d="M3 2.5a.5.5 0 0 1 .8-.4l8 5a.5.5 0 0 1 0 .8l-8 5A.5.5 0 0 1 3 12.5v-10z"/></svg> Lanjut';
+    setStatus('Dijeda', false);
+  }
+}
+
+function stopSpeech() { synth.cancel(); setStatus('Dihentikan'); setSpeakingUI(false); clearActiveBoardCards(); }
+function clearText()   { document.getElementById('ttsInput').value = ''; document.getElementById('ttsInput').focus(); }
+
+function setSpeakingUI(on) {
+  document.getElementById('speakBtn').disabled = on;
+  document.getElementById('pauseBtn').disabled = !on;
+  document.getElementById('stopBtn').disabled  = !on;
+  if (!on) {
+    isPaused = false;
+    document.getElementById('pauseBtn').innerHTML = '<svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><path d="M4 2h2v11H4V2zm5 0h2v11H9V2z"/></svg> Jeda';
+  }
+}
+
+function setStatus(msg, active) {
+  document.getElementById('statusText').textContent = msg;
+  document.getElementById('statusDot').className    = 'dot' + (active ? ' active' : '');
+  document.getElementById('statusBar').textContent  = msg;
+}
+
+function clearActiveBoardCards() {
+  document.querySelectorAll('.board-card.speaking').forEach(c => c.classList.remove('speaking'));
+}
+
+/* ──────────────────────────────────────────────────────
+   TAB SWITCHING
+────────────────────────────────────────────────────── */
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+  document.getElementById('tab' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+}
+
+/* ──────────────────────────────────────────────────────
+   QUICK PHRASES (TTS TAB)
+────────────────────────────────────────────────────── */
+const quickPhrases = [
+  'Halo semuanya!',
+  'Terima kasih banyak.',
+  'Saya perlu bantuan.',
+  'Sampai jumpa!',
+  'Selamat datang!',
+  'Mohon maaf.',
+  'Bagus sekali!',
+  'Saya tidak mengerti.',
+];
+
+function renderQuickPhrases() {
+  const wrap = document.getElementById('quickWrap');
+  wrap.innerHTML = '';
+  quickPhrases.forEach(txt => {
+    const chip = document.createElement('button');
+    chip.className = 'quick-chip';
+    chip.textContent = txt;
+    chip.onclick = () => {
+      document.getElementById('ttsInput').value = txt;
+      switchTab('tts');
+      speak(txt);
+    };
+    wrap.appendChild(chip);
+  });
+}
+
+/* ──────────────────────────────────────────────────────
+   SPEECH BOARD
+────────────────────────────────────────────────────── */
+let boardPhrases = [
+  { text:'Halo',           emoji:'👋', cat:'salam'     },
+  { text:'Selamat pagi',   emoji:'🌅', cat:'salam'     },
+  { text:'Terima kasih',   emoji:'🙏', cat:'salam'     },
+  { text:'Sampai jumpa',   emoji:'🤝', cat:'salam'     },
+  { text:'Tolong bantu',   emoji:'🆘', cat:'kebutuhan' },
+  { text:'Saya lapar',     emoji:'🍽️', cat:'kebutuhan' },
+  { text:'Saya haus',      emoji:'💧', cat:'kebutuhan' },
+  { text:'Saya lelah',     emoji:'😴', cat:'kebutuhan' },
+  { text:'Saya sakit',     emoji:'🤒', cat:'kebutuhan' },
+  { text:'Ya',             emoji:'✅', cat:'respon'    },
+  { text:'Tidak',          emoji:'❌', cat:'respon'    },
+  { text:'Mungkin',        emoji:'🤔', cat:'respon'    },
+  { text:'Luar biasa!',    emoji:'⭐', cat:'respon'    },
+  { text:'Oke',            emoji:'👍', cat:'respon'    },
+  { text:'Satu',           emoji:'1️⃣', cat:'angka'    },
+  { text:'Dua',            emoji:'2️⃣', cat:'angka'    },
+  { text:'Tiga',           emoji:'3️⃣', cat:'angka'    },
+  { text:'Empat',          emoji:'4️⃣', cat:'angka'    },
+  { text:'Lima',           emoji:'5️⃣', cat:'angka'    },
+  { text:'Sekarang',       emoji:'⏰', cat:'waktu'    },
+  { text:'Nanti',          emoji:'🕐', cat:'waktu'    },
+  { text:'Besok',          emoji:'📅', cat:'waktu'    },
+  { text:'Kemarin',        emoji:'📆', cat:'waktu'    },
+  { text:'Senang',         emoji:'😊', cat:'perasaan' },
+  { text:'Sedih',          emoji:'😢', cat:'perasaan' },
+  { text:'Takut',          emoji:'😨', cat:'perasaan' },
+  { text:'Marah',          emoji:'😠', cat:'perasaan' },
+];
+
+let currentCat = 'semua';
+
+function getUniqueCategories() {
+  return ['semua', ...new Set(boardPhrases.map(p => p.cat))];
+}
+
+function renderCategories() {
+  const row = document.getElementById('catRow');
+  row.innerHTML = '';
+  getUniqueCategories().forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-tag' + (cat === currentCat ? ' active' : '');
+    btn.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+    btn.onclick = () => { currentCat = cat; renderBoard(); };
+    row.appendChild(btn);
+  });
+
+  // Update add-cat select
+  const sel = document.getElementById('newCatSel');
+  const cats = [...new Set(boardPhrases.map(p => p.cat))];
+  sel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('') +
+    '<option value="__new__">+ Baru…</option>';
+}
+
+function renderBoard() {
+  const grid = document.getElementById('boardGrid');
+  grid.innerHTML = '';
+  const list = currentCat === 'semua'
+    ? boardPhrases
+    : boardPhrases.filter(p => p.cat === currentCat);
+
+  list.forEach(p => {
+    const realIdx = boardPhrases.indexOf(p);
+    const card = document.createElement('div');
+    card.className = 'board-card';
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', 'Ucapkan: ' + p.text);
+    card.innerHTML = `
+      <button class="bc-del" aria-label="Hapus ${p.text}" onclick="deletePhrase(${realIdx}, event)">✕</button>
+      <span class="bc-emoji" aria-hidden="true">${p.emoji}</span>
+      <span class="bc-word">${p.text}</span>
+      <span class="bc-cat">${p.cat}</span>`;
+    card.onclick = function() {
+      clearActiveBoardCards();
+      card.classList.add('speaking');
+      speak(p.text, () => card.classList.remove('speaking'));
+    };
+    card.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') card.click(); };
+    grid.appendChild(card);
+  });
+
+  renderCategories();
+}
+
+function deletePhrase(idx, e) {
+  e.stopPropagation();
+  boardPhrases.splice(idx, 1);
+  renderBoard();
+}
+
+function addPhrase() {
+  const input = document.getElementById('newText');
+  const catSel = document.getElementById('newCatSel');
+  const text = input.value.trim();
+  if (!text) { input.focus(); return; }
+  let cat = catSel.value;
+  if (cat === '__new__') {
+    cat = (prompt('Nama kategori baru:') || 'lainnya').toLowerCase().trim();
+  }
+  const emojis = ['💬','🔊','🗣️','✨','🎯','💡','📢','🌟','🎤','🆕'];
+  boardPhrases.push({ text, emoji: emojis[Math.floor(Math.random() * emojis.length)], cat });
+  input.value = '';
+  renderBoard();
+}
+
+/* ──────────────────────────────────────────────────────
+   MIT APP INVENTOR BRIDGE
+   App Inventor dapat memanggil fungsi JS via WebViewer:
+   webview.evaluateJavascript("speakFromAI('Halo dunia!')")
+   Dan menerima event via AppInventor.setWebViewString(...)
+────────────────────────────────────────────────────── */
+function speakFromAI(text) {
+  // Dipanggil dari blok MIT App Inventor
+  speak(text);
+}
+
+function getCurrentStatus() {
+  // Kembalikan status ke App Inventor
+  return synth.speaking ? 'speaking' : synth.paused ? 'paused' : 'idle';
+}
+
+/* Kirim event ke App Inventor (jika WebViewer tersedia) */
+function sendToAI(eventName, data) {
+  try {
+    if (window.AppInventor) {
+      window.AppInventor.setWebViewString(JSON.stringify({ event: eventName, data: data }));
+    }
+  } catch(e) {}
+}
+
+/* ──────────────────────────────────────────────────────
+   INIT
+────────────────────────────────────────────────────── */
+renderQuickPhrases();
+renderBoard();
+</script>
+</body>
+</html>
